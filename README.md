@@ -18,8 +18,9 @@ You are the last ember of a star the Void swallowed. Your light drains, always �
 - **Light** — your ember meter drains over time. Collect embers to refill it; if it empties, you lose a life.
 - **Combo** — kills in quick succession raise your score multiplier, up to x5.
 - **Boss** — every 5th wave the sector's Maw comes: radial bullet rings, spawns drifters, enrages below half health.
-- **Sectors** — four themed regions (Cinder Drift, Void Reef, Starfall, Nova Core), each with its own look, enemy mix, pace and ember harvest target. Beat a sector's boss to clear it and unlock the next. Pick a sector on the title screen (click a card or press 1–4), and watch its per-sector best, best wave and ember tally.
-- **Save** — best score, per-sector bests and unlocks persist between sessions; the game-over screen shows the run's full stats (sector, waves, time, kills, embers, accuracy).
+- **Sectors** — four themed regions (Cinder Drift, Void Reef, Starfall, Nova Core), each with its own look, enemy mix, pace, ember harvest target, and a landmark on the horizon — the dying star, void crystal spires, a broken ringed planet, the pulsing nova heart — over a layered parallax sky. Beat a sector's boss to clear it and unlock the next. Pick a sector on the title screen (click a card or press 1–4), and watch its per-sector best, best wave and ember tally.
+- **Campaign — win the game** — beating a sector's boss ends the run in victory: a win screen with the run's stats (score, waves, time, kills, embers, accuracy) and the campaign's progress. Relight all four sectors and the light returns: the campaign is won. A run is an arc with an ending, not an endless loop.
+- **Save** — best score, per-sector bests and unlocks persist between sessions; the game-over and win screens show the run's full stats (sector, waves, time, kills, embers, accuracy).
 - Pause with P / Esc, mute with M. Best score is kept between sessions.
 
 ## Run it
@@ -35,11 +36,11 @@ Or serve `game/` with any static server and open `game/index.html` in desktop Ch
 
 ## Screenshots
 
-The four screenshots under `screenshots/` are real renders of the game's own code, staged deterministically with `?shot=start|play|action|end&seed=1` (see `shots.json`).
+The four screenshots under `screenshots/` are real renders of the game's own code, staged deterministically with `?shot=start|play|action|victory&seed=1` (see `shots.json`): title with sector select, mid-wave play, the boss fight, and the win screen.
 
 ## Files
 
-- `game/index.html` + `game/src/` — the game: `config.js` (tuning), `sectors.js` (the four regions), `save.js` (persistence), `random.js` (seeded RNG), `input.js` (keyboard/mouse), `audio.js` (synthesised sound), `world.js` (the step orchestration), `waves.js` (wave director), `enemies.js` (spawning, AI, deaths), `boss.js` (the Maw's attacks), `player.js` (taking damage), `pickups.js` (embers, power-ups), `effects.js` (particles, floaters, shockwaves), `util.js` (shared math), `render.js` (in-play drawing + HUD), `background.js` (the sector sky), `screens.js` (title with sector select, game over, pause), `shots.js` (screenshot scenes + autopilot), `main.js` (loop + state machine).
+- `game/index.html` + `game/src/` — the game: `config.js` (tuning), `sectors.js` (the four regions), `save.js` (persistence), `random.js` (seeded RNG), `input.js` (keyboard/mouse), `audio.js` (synthesised sound), `world.js` (the step orchestration), `waves.js` (wave director), `enemies.js` (spawning, AI, deaths), `boss.js` (the Maw's attacks), `player.js` (taking damage), `pickups.js` (embers, power-ups), `effects.js` (particles, floaters, shockwaves), `util.js` (shared math), `render.js` (in-play drawing + HUD), `background.js` (the sector sky: parallax + landmarks), `screens.js` (title with sector select, game over, win screen, pause), `shots.js` (screenshot scenes + autopilot), `main.js` (loop + state machine).
 - `main.ts` — the entrypoint: copies `game/` and `screenshots/` to `/output` and writes `dossier.json`.
 - `vendor/makefun-game.ts` — the kit's library, unchanged.
 - `serve.ts` — local static server for development.
