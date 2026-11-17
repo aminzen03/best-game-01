@@ -1,13 +1,17 @@
 // NOVA EMBER — wave flow: starting a wave, boss waves, and the clear
 // bonus between waves.
 // One file, one job: the wave director.
-import { wavePlan } from './config.js';
+import { wavePlan, SHRINE } from './config.js';
 import { spawnEnemy, edgeSpawn } from './enemies.js';
+import { spawnShrine } from './shrines.js';
 
 export function startWave(s, wave, audio) {
   s.wave = wave;
   s.waveState = 'active';
   s.spawnQueue = [];
+  // One shrine wakes each wave from wave 2: a side objective beside the
+  // wave itself.
+  if (wave >= SHRINE.spawnFromWave) spawnShrine(s);
   if (wave % 5 === 0) {
     const pos = edgeSpawn(s, 380);
     spawnEnemy(s, 'maw', pos.x, pos.y);
