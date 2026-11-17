@@ -5,7 +5,7 @@
 import { FIELD, PLAYER, COMBO, ENEMY_TYPES, ENEMY_UNLOCK } from './config.js';
 import { TAU, dist2 } from './util.js';
 import { burst, addFloater } from './effects.js';
-import { dropEmbers, dropPowerup } from './pickups.js';
+import { dropEmbers, dropPowerup, dropShards } from './pickups.js';
 import { hurtPlayer } from './player.js';
 import { mawBurst, mawSpawn } from './boss.js';
 
@@ -56,6 +56,8 @@ export function killEnemy(s, e, audio) {
   addFloater(s, e.x, e.y - 10, `+${gained}`, '#e8f6ff', 15);
   burst(s, e.x, e.y, e.def.glow, e.kind === 'maw' ? 60 : 16, 260);
   dropEmbers(s, e.x, e.y, e.def.embers);
+  // Elites drop star shards, the second collectible; the Maw drops five.
+  if (e.kind === 'splitter' || e.kind === 'orbiter') dropShards(s, e.x, e.y, 1);
   dropPowerup(s, e.x, e.y);
   if (audio) audio.enemyDie();
   if (e.kind === 'splitter') {
@@ -69,6 +71,7 @@ export function killEnemy(s, e, audio) {
     s.boss = null;
     s.shake = Math.max(s.shake, 22);
     dropEmbers(s, e.x, e.y, 6);
+    dropShards(s, e.x, e.y, 5);
     s.player.novaCharges = Math.min(PLAYER.novaMax, s.player.novaCharges + 1);
     addFloater(s, e.x, e.y - 44, `${e.def.name} DESTROYED`, '#ffd166', 22);
     // Beating a sector's boss clears the sector and unlocks the next one.
