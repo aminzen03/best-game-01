@@ -17,7 +17,9 @@ You are the last ember of a star the Void swallowed. Your light drains, always �
 - **Power-ups** — shield, rapid fire, spread shot, nova charge.
 - **Light** — your ember meter drains over time. Collect embers to refill it; if it empties, you lose a life.
 - **Combo** — kills in quick succession raise your score multiplier, up to x5.
-- **Boss** — every 5th wave, the Void Maw: radial bullet rings, spawns drifters, enrages below half health.
+- **Boss** — every 5th wave the sector's Maw comes: radial bullet rings, spawns drifters, enrages below half health.
+- **Sectors** — four themed regions (Cinder Drift, Void Reef, Starfall, Nova Core), each with its own look, enemy mix, pace and ember harvest target. Beat a sector's boss to clear it and unlock the next. Pick a sector on the title screen (click a card or press 1–4), and watch its per-sector best, best wave and ember tally.
+- **Save** — best score, per-sector bests and unlocks persist between sessions; the game-over screen shows the run's full stats (sector, waves, time, kills, embers, accuracy).
 - Pause with P / Esc, mute with M. Best score is kept between sessions.
 
 ## Run it
@@ -37,7 +39,7 @@ The four screenshots under `screenshots/` are real renders of the game's own cod
 
 ## Files
 
-- `game/index.html` + `game/src/` — the game: `config.js` (tuning), `random.js` (seeded RNG), `input.js` (keyboard/mouse), `audio.js` (synthesised sound), `world.js` (rules), `render.js` (drawing + HUD + screens), `shots.js` (screenshot scenes + autopilot), `main.js` (loop + state machine).
+- `game/index.html` + `game/src/` — the game: `config.js` (tuning), `sectors.js` (the four regions), `save.js` (persistence), `random.js` (seeded RNG), `input.js` (keyboard/mouse), `audio.js` (synthesised sound), `world.js` (the step orchestration), `waves.js` (wave director), `enemies.js` (spawning, AI, deaths), `boss.js` (the Maw's attacks), `player.js` (taking damage), `pickups.js` (embers, power-ups), `effects.js` (particles, floaters, shockwaves), `util.js` (shared math), `render.js` (in-play drawing + HUD), `background.js` (the sector sky), `screens.js` (title with sector select, game over, pause), `shots.js` (screenshot scenes + autopilot), `main.js` (loop + state machine).
 - `main.ts` — the entrypoint: copies `game/` and `screenshots/` to `/output` and writes `dossier.json`.
 - `vendor/makefun-game.ts` — the kit's library, unchanged.
 - `serve.ts` — local static server for development.
