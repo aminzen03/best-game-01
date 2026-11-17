@@ -2,13 +2,15 @@
 // and the ?shot= scene mode used for the entry's screenshots.
 // One file, one job: run the game.
 import { FIELD, STEP, PLAYER } from './config.js';
-import { SECTORS, sectorById } from './sectors.js';
+import { SECTORS, sectorById, nextSector } from './sectors.js';
 import { loadSave, recordRun } from './save.js';
 import { makeRng } from './random.js';
 import { createInput } from './input.js';
 import { createAudio } from './audio.js';
 import { createWorld, resetWorld, stepWorld } from './world.js';
-import { render, SCREEN_TITLE, SCREEN_PLAY, SCREEN_OVER, SCREEN_PAUSE } from './render.js';
+import {
+  render, SCREEN_TITLE, SCREEN_PLAY, SCREEN_OVER, SCREEN_PAUSE, SCREEN_WIN,
+} from './render.js';
 import { stageShot, autopilotInput } from './shots.js';
 import { sectorCardAt } from './screens.js';
 
@@ -88,6 +90,19 @@ function togglePause() {
   else if (screen === SCREEN_PAUSE) screen = SCREEN_PLAY;
 }
 
+// From the win screen: fly to the next sector, or back to the title when
+// the campaign is complete (no next sector).
+function advanceFromVictory() {
+  audio.unlock();
+  const next = nextSector(world.sectorId);
+  if (next) {
+    selectedSector = next.id;
+    startGame();
+  } else {
+    backToTitle();
+  }
+}
+
 function frame(now) {
   requestAnimationFrame(frame);
   if (frozen) {
@@ -103,7 +118,10 @@ function frame(now) {
   // Global keys.
   if (input.hit('m', 'M')) audio.toggleMute();
   if (input.hit('p', 'P', 'Escape')) togglePause();
-  if (screen === SCREEN_TITLE) {
+  if (screen === SCREEN_WIN) {
+    if (input.hit('Enter') || input.mouse.clicked) advanceFromVictory();
+    else if (input.hit('t', 'T')) backToTitle();
+  } else if (screen === SCREEN_TITLE) {
     // Sector select: keys 1-4, or click a card (click again to start).
     for (let i = 0; i < SECTORS.length; i += 1) {
       if (input.hit(String(i + 1))) selectSector(SECTORS[i].id);
@@ -136,7 +154,7 @@ function frame(now) {
     while (acc >= STEP) {
       acc -= STEP;
       stepWorld(world, autopilotInput(world), null, STEP);
-      if (world.gameOver) {
+      if (world.gameOver || world.victory) {
         resetWorld(world, selectedSector);
         world.best = save.best;
       }
@@ -174,6 +192,17 @@ function frame(now) {
         runRecorded = true;
       }
       if (world.overTimer > 1.2) screen = SCREEN_OVER;
+    }
+    // The boss is dead: after the celebration, the win screen takes over.
+    // The run is recorded once, with its embers counted (the mid-run save
+    // at sector-clear used countEmbers=false, so nothing double-counts).
+    if (world.victory && world.victoryTimer > 1.2) {
+      if (!runRecorded) {
+        recordRun(save, runStats(), true);
+        world.best = save.best;
+        runRecorded = true;
+      }
+      screen = SCREEN_WIN;
     }
   }
 
