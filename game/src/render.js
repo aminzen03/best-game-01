@@ -162,6 +162,47 @@ function drawRift(ctx, r, time) {
   }
 }
 
+function drawShrine(ctx, sh, time) {
+  const pulse = 0.75 + 0.25 * Math.sin(time * 2.4 + sh.x);
+  drawGlow(ctx, sh.x, sh.y, 70, sh.lit ? '#7dff6a' : '#ffd166', sh.lit ? 0.5 : 0.55 * pulse);
+  ctx.save();
+  ctx.translate(sh.x, sh.y);
+  ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = sh.lit ? 'rgba(125, 255, 106, 0.25)' : 'rgba(255, 209, 102, 0.16)';
+  ctx.strokeStyle = sh.lit ? '#7dff6a' : '#ffd166';
+  ctx.lineWidth = 2.5;
+  const r = 26;
+  ctx.beginPath();
+  ctx.moveTo(0, -r);
+  ctx.lineTo(r, 0);
+  ctx.lineTo(0, r);
+  ctx.lineTo(-r, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+  // Hit pips: how many shots remain to light it.
+  if (!sh.lit) {
+    ctx.fillStyle = '#ffd166';
+    for (let i = 0; i < sh.maxHp; i += 1) {
+      ctx.globalAlpha = i < sh.hp ? 0.95 : 0.25;
+      ctx.beginPath();
+      ctx.arc(sh.x - (sh.maxHp - 1) * 7 + i * 14, sh.y + 40, 4, 0, TAU);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#ffd166';
+    ctx.font = 'bold 12px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SHRINE', sh.x, sh.y - 40);
+  } else {
+    ctx.fillStyle = '#7dff6a';
+    ctx.font = 'bold 12px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('SHRINE LIT', sh.x, sh.y - 40);
+  }
+}
+
 function drawPowerup(ctx, pu, time) {
   const bob = Math.sin(time * 3 + pu.x) * 4;
   const colors = { shield: '#37e6ff', rapid: '#7dff6a', spread: '#ffd166', nova: '#c77dff' };
@@ -262,7 +303,7 @@ function drawHud(ctx, s, muted) {
   ctx.strokeRect(mx, my, mw, 10);
   ctx.fillStyle = p.embersGathered >= s.sector.emberTarget ? '#7dff6a' : PALETTE.gold;
   ctx.font = 'bold 12px ui-monospace, monospace';
-  ctx.fillText(`EMBERS ${p.embersGathered}/${s.sector.emberTarget}`, FIELD.width / 2, my + 26);
+  ctx.fillText(`EMBERS ${p.embersGathered}/${s.sector.emberTarget}  ·  SHARDS ${p.shardsGathered}  ·  SHRINES ${s.shrinesLit}/${s.shrinesSpawned}`, FIELD.width / 2, my + 26);
   // Active power-up timers, bottom left.
   ctx.textAlign = 'left';
   ctx.font = '13px ui-monospace, monospace';
@@ -298,6 +339,25 @@ export function render(ctx, s, screen, time, muted, steady = false, ui = null) {
     ctx.arc(em.x, em.y, 4, 0, TAU);
     ctx.fill();
   }
+  // Star shards: cyan diamonds, the second collectible.
+  for (const sh of s.shards) {
+    const tw = 0.7 + 0.3 * Math.sin(time * 5 + sh.x * 2);
+    drawGlow(ctx, sh.x, sh.y, 18, '#37e6ff', tw);
+    ctx.save();
+    ctx.translate(sh.x, sh.y);
+    ctx.rotate(time * 2 + sh.x);
+    ctx.fillStyle = '#d9fbff';
+    ctx.beginPath();
+    ctx.moveTo(0, -7);
+    ctx.lineTo(5, 0);
+    ctx.lineTo(0, 7);
+    ctx.lineTo(-5, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+  // Shrines: glowing obelisks with hit pips.
+  for (const shr of s.shrines) drawShrine(ctx, shr, time);
   for (const pu of s.powerups) drawPowerup(ctx, pu, time);
   // Enemy bullets (under enemies).
   for (const b of s.bullets) {
