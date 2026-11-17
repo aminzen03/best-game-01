@@ -130,7 +130,7 @@ function runSeconds(s, seconds, inputFn, audio, stopWhen) {
  * `audio` is null in shot mode: screenshots are silent.
  */
 export function stageShot(name, world, audio = null) {
-  resetWorld(world);
+  resetWorld(world, 'cinder');
   if (name !== 'play' && name !== 'action' && name !== 'end') {
     runSeconds(world, START_SECONDS, autopilotInput, audio);
     return { screen: SCREEN_TITLE, time: START_SECONDS };
