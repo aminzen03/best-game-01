@@ -51,7 +51,7 @@ export const ENEMY_TYPES = {
   },
   maw: {
     name: 'Void Maw', shape: 'maw', color: '#ff3860', glow: '#d90429',
-    radius: 64, hp: 620, speed: 42, score: 1500, embers: 10, damage: 2,
+    radius: 64, hp: 380, speed: 42, score: 1500, embers: 10, damage: 2,
   },
 };
 
