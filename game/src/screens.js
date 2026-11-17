@@ -139,7 +139,7 @@ export function drawTitle(ctx, s, time, steady = false, ui = null) {
   }
   ctx.fillStyle = PALETTE.hudDim;
   ctx.font = '13px system-ui, sans-serif';
-  ctx.fillText('A complete game: 4 sectors, waves, bosses, power-ups, nova, rifts — and a restart.', FIELD.width / 2, 644);
+  ctx.fillText('Clear each sector\'s boss to relight it — relight all four sectors to win the campaign.', FIELD.width / 2, 644);
 }
 
 export function drawGameOver(ctx, s, steady = false, ui = null) {
@@ -201,6 +201,70 @@ export function drawGameOver(ctx, s, steady = false, ui = null) {
     ctx.font = 'bold 22px system-ui, sans-serif';
     ctx.fillText('PRESS R OR CLICK TO PLAY AGAIN', FIELD.width / 2, 466);
   }
+}
+
+export function drawVictory(ctx, s, steady = false, ui = null) {
+  // The win screen: beating a sector's boss ends the run in victory, with
+  // the run's stats and the campaign's progress — the counterweight to the
+  // game-over screen, and the reason a run has an ending at all.
+  ctx.fillStyle = 'rgba(2, 12, 4, 0.62)';
+  ctx.fillRect(0, 0, FIELD.width, FIELD.height);
+  ctx.textAlign = 'center';
+  const save = ui && ui.save;
+  // Count sectors the save already has cleared, plus this run's sector:
+  // the save is only folded when the run is recorded, which in shot mode
+  // never happens — but this sector IS relit, so it counts.
+  const clearedCount = save
+    ? SECTORS.filter((sec) => (
+      (save.sectors[sec.id] && save.sectors[sec.id].cleared)
+      || (sec.id === s.sectorId && s.sectorCleared)
+    )).length
+    : 0;
+  const campaignComplete = clearedCount >= SECTORS.length;
+  const next = nextSector(s.sectorId);
+  ctx.fillStyle = '#7dff6a';
+  ctx.font = 'bold 64px system-ui, sans-serif';
+  ctx.shadowColor = '#7dff6a';
+  ctx.shadowBlur = 24;
+  ctx.fillText(campaignComplete ? 'THE LIGHT RETURNS' : 'SECTOR RELIT', FIELD.width / 2, 170);
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = PALETTE.hud;
+  ctx.font = 'bold 34px ui-monospace, monospace';
+  ctx.fillText(`SCORE  ${s.score}`, FIELD.width / 2, 238);
+  const mins = Math.floor(s.time / 60);
+  const secs = Math.floor(s.time % 60).toString().padStart(2, '0');
+  const acc = s.shotsFired > 0 ? Math.round((s.shotsHit / s.shotsFired) * 100) : 0;
+  ctx.font = '17px ui-monospace, monospace';
+  ctx.fillText(
+    `SECTOR  ${s.sector.name}      WAVES  ${s.wavesCleared}      TIME  ${mins}:${secs}`,
+    FIELD.width / 2, 288,
+  );
+  ctx.fillText(
+    `VOID DESTROYED  ${s.kills}      EMBERS  ${s.player.embersGathered}/${s.sector.emberTarget}      ACCURACY  ${acc}%`,
+    FIELD.width / 2, 316,
+  );
+  ctx.fillStyle = PALETTE.gold;
+  ctx.font = 'bold 18px ui-monospace, monospace';
+  ctx.fillText(`SECTORS RELIT  ${clearedCount}/${SECTORS.length}`, FIELD.width / 2, 360);
+  ctx.fillStyle = '#7dff6a';
+  ctx.font = 'bold 20px ui-monospace, monospace';
+  ctx.fillText(
+    campaignComplete
+      ? '★ ALL SECTORS CLEARED — YOU ARE THE LAST LIGHT ★'
+      : `★ ${next.name} UNLOCKED ★`,
+    FIELD.width / 2, 398,
+  );
+  if (steady || Math.floor(s.time * 1.6) % 2 === 0) {
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 22px system-ui, sans-serif';
+    ctx.fillText(
+      campaignComplete ? 'PRESS ENTER — RETURN TO TITLE' : `PRESS ENTER — FLY TO ${next.name}`,
+      FIELD.width / 2, 452,
+    );
+  }
+  ctx.fillStyle = PALETTE.hudDim;
+  ctx.font = '15px system-ui, sans-serif';
+  ctx.fillText('T — BACK TO TITLE', FIELD.width / 2, 490);
 }
 
 export function drawPause(ctx) {
