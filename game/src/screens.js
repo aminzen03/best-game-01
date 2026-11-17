@@ -4,6 +4,7 @@
 // One file, one job: the screens.
 import { FIELD, PLAYER, PALETTE } from './config.js';
 import { SECTORS, nextSector } from './sectors.js';
+import { medalsForRun, medalPips } from './save.js';
 
 // Sector cards on the title screen: four across, shared with main.js for
 // click hit-testing.
@@ -66,15 +67,21 @@ function drawSectorCards(ctx, ui) {
       ctx.font = '13px ui-monospace, monospace';
       ctx.fillText(`BEST ${rec.best}  ·  WAVE ${rec.bestWave}`, r.x + r.w / 2, r.y + 86);
       ctx.fillStyle = rec.embers >= sec.emberTarget ? '#7dff6a' : PALETTE.gold;
-      ctx.fillText(`EMBERS ${rec.embers}/${sec.emberTarget}`, r.x + r.w / 2, r.y + 108);
+      ctx.fillText(`EMBERS ${rec.embers}/${sec.emberTarget}  ·  SHARDS ${rec.shards}`, r.x + r.w / 2, r.y + 108);
+      // Medals earned in this sector, beside the cleared/selected mark.
+      const pips = medalPips(rec.medals);
       if (isSelected) {
         ctx.fillStyle = sec.accent;
         ctx.font = 'bold 12px ui-monospace, monospace';
-        ctx.fillText('◆ SELECTED', r.x + r.w / 2, r.y + 128);
+        ctx.fillText(`◆ SELECTED  ${pips}`, r.x + r.w / 2, r.y + 128);
       } else if (rec.cleared) {
         ctx.fillStyle = '#7dff6a';
         ctx.font = 'bold 12px ui-monospace, monospace';
-        ctx.fillText('✓ CLEARED', r.x + r.w / 2, r.y + 128);
+        ctx.fillText(`✓ CLEARED  ${pips}`, r.x + r.w / 2, r.y + 128);
+      } else {
+        ctx.fillStyle = PALETTE.hudDim;
+        ctx.font = 'bold 12px ui-monospace, monospace';
+        ctx.fillText(`MEDALS  ${pips}`, r.x + r.w / 2, r.y + 128);
       }
     }
   }
@@ -123,7 +130,7 @@ export function drawTitle(ctx, s, time, steady = false, ui = null) {
     'WASD / ARROWS — fly      MOUSE — aim      HOLD CLICK / SPACE — fire',
     'SHIFT / RIGHT-CLICK — dash      E — NOVA blast      P — pause      M — sound',
     'Your LIGHT drains — collect the embers of fallen Void to stay alive.',
-    'Shoot a RIFT 12 times to charge it. Every 5th wave the MAW comes.',
+    'RIFT 12 hits to charge · SHRINE 6 hits to light for shards · MAW every 5th wave.',
   ];
   lines.forEach((line, i) => ctx.fillText(line, px + 24, py + 54 + i * 21));
   if (s.best > 0) {
@@ -179,12 +186,16 @@ export function drawGameOver(ctx, s, steady = false, ui = null) {
     `VOID DESTROYED  ${s.kills}      EMBERS  ${s.player.embersGathered}/${s.sector.emberTarget}      ACCURACY  ${acc}%`,
     FIELD.width / 2, 354,
   );
+  ctx.fillText(
+    `SHARDS  ${s.player.shardsGathered}      SHRINES LIT  ${s.shrinesLit}/${s.shrinesSpawned}      HITS TAKEN  ${s.hitsTaken}`,
+    FIELD.width / 2, 380,
+  );
   if (ui && ui.save) {
     const rec = ui.save.sectors[s.sectorId];
     if (rec) {
       ctx.fillStyle = PALETTE.hudDim;
       ctx.font = '15px ui-monospace, monospace';
-      ctx.fillText(`SECTOR BEST  ${rec.best}  ·  BEST WAVE  ${rec.bestWave}`, FIELD.width / 2, 382);
+      ctx.fillText(`SECTOR BEST  ${rec.best}  ·  BEST WAVE  ${rec.bestWave}  ·  MEDALS  ${medalPips(rec.medals)}`, FIELD.width / 2, 406);
     }
   }
   if (s.sectorCleared) {
@@ -193,13 +204,13 @@ export function drawGameOver(ctx, s, steady = false, ui = null) {
     ctx.font = 'bold 20px ui-monospace, monospace';
     ctx.fillText(
       next ? `★ SECTOR CLEARED — ${next.name} UNLOCKED ★` : '★ ALL SECTORS CLEARED — YOU ARE THE LAST LIGHT ★',
-      FIELD.width / 2, 420,
+      FIELD.width / 2, 442,
     );
   }
   if (steady || Math.floor(s.time * 1.6) % 2 === 0) {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 22px system-ui, sans-serif';
-    ctx.fillText('PRESS R OR CLICK TO PLAY AGAIN', FIELD.width / 2, 466);
+    ctx.fillText('PRESS R OR CLICK TO PLAY AGAIN', FIELD.width / 2, 488);
   }
 }
 
@@ -243,28 +254,36 @@ export function drawVictory(ctx, s, steady = false, ui = null) {
     `VOID DESTROYED  ${s.kills}      EMBERS  ${s.player.embersGathered}/${s.sector.emberTarget}      ACCURACY  ${acc}%`,
     FIELD.width / 2, 316,
   );
+  const runMedals = medalsForRun({
+    cleared: s.sectorCleared, hitsTaken: s.hitsTaken, time: s.time,
+    shrinesLit: s.shrinesLit, shrinesSpawned: s.shrinesSpawned,
+  });
+  ctx.fillText(
+    `SHARDS  ${s.player.shardsGathered}      SHRINES LIT  ${s.shrinesLit}/${s.shrinesSpawned}      MEDALS  ${medalPips(runMedals)}`,
+    FIELD.width / 2, 344,
+  );
   ctx.fillStyle = PALETTE.gold;
   ctx.font = 'bold 18px ui-monospace, monospace';
-  ctx.fillText(`SECTORS RELIT  ${clearedCount}/${SECTORS.length}`, FIELD.width / 2, 360);
+  ctx.fillText(`SECTORS RELIT  ${clearedCount}/${SECTORS.length}`, FIELD.width / 2, 372);
   ctx.fillStyle = '#7dff6a';
   ctx.font = 'bold 20px ui-monospace, monospace';
   ctx.fillText(
     campaignComplete
       ? '★ ALL SECTORS CLEARED — YOU ARE THE LAST LIGHT ★'
       : `★ ${next.name} UNLOCKED ★`,
-    FIELD.width / 2, 398,
+    FIELD.width / 2, 410,
   );
   if (steady || Math.floor(s.time * 1.6) % 2 === 0) {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 22px system-ui, sans-serif';
     ctx.fillText(
       campaignComplete ? 'PRESS ENTER — RETURN TO TITLE' : `PRESS ENTER — FLY TO ${next.name}`,
-      FIELD.width / 2, 452,
+      FIELD.width / 2, 458,
     );
   }
   ctx.fillStyle = PALETTE.hudDim;
   ctx.font = '15px system-ui, sans-serif';
-  ctx.fillText('T — BACK TO TITLE', FIELD.width / 2, 490);
+  ctx.fillText('T — BACK TO TITLE', FIELD.width / 2, 496);
 }
 
 export function drawPause(ctx) {
