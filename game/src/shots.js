@@ -162,6 +162,27 @@ function bossFightInput(s) {
   };
 }
 
+function nearestShrine(s) {
+  let best = null;
+  let bestD = Infinity;
+  for (const sh of s.shrines) {
+    if (sh.lit) continue;
+    const d = (sh.x - s.player.x) ** 2 + (sh.y - s.player.y) ** 2;
+    if (d < bestD) { bestD = d; best = sh; }
+  }
+  return { shrine: best, dist: Math.sqrt(bestD) };
+}
+
+function nearestShard(s) {
+  let best = null;
+  let bestD = Infinity;
+  for (const sh of s.shards) {
+    const d = (sh.x - s.player.x) ** 2 + (sh.y - s.player.y) ** 2;
+    if (d < bestD) { bestD = d; best = sh; }
+  }
+  return { shard: best, dist: Math.sqrt(bestD) };
+}
+
 // Drive the game like a decent player: chase embers when the light is low,
 // keep a firing distance from the nearest enemy, dash out of a crowd,
 // nova when surrounded. Returns the plain input object stepWorld takes.
@@ -171,12 +192,18 @@ export function autopilotInput(s) {
   const { enemy, dist: enemyDist } = nearestEnemy(s);
   const { ember, dist: emberDist } = nearestEmber(s);
   const { bullet, dist: bulletDist } = nearestBullet(s);
+  const { shrine, dist: shrineDist } = nearestShrine(s);
+  const { shard, dist: shardDist } = nearestShard(s);
 
   let tx = p.x;
   let ty = p.y;
   if (p.light < 62 && ember) {
     tx = ember.x;
     ty = ember.y;
+  } else if (shard && p.light >= 70 && shardDist < 220) {
+    // Light is safe: sweep up a star shard on the way.
+    tx = shard.x;
+    ty = shard.y;
   } else if (enemy) {
     // Strafe at ~260px from the target, circling it.
     const dx = p.x - enemy.x;
@@ -215,11 +242,14 @@ export function autopilotInput(s) {
   for (const e of s.enemies) {
     if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 < 300 * 300) nearCount += 1;
   }
+  // No enemy close: light the shrine instead of idling — the shots it
+  // takes are the same shots that would chase the next wave anyway.
+  const aimShrine = shrine && enemyDist > 230;
   return {
     move,
-    aimX: enemy ? enemy.x : p.x + 100,
-    aimY: enemy ? enemy.y : p.y,
-    firing: !!enemy,
+    aimX: aimShrine ? shrine.x : enemy ? enemy.x : p.x + 100,
+    aimY: aimShrine ? shrine.y : enemy ? enemy.y : p.y,
+    firing: !!enemy || aimShrine,
     dash: enemyDist < 95 && p.dashCd <= 0,
     nova: nearCount >= 6 && p.novaCharges > 0,
   };
@@ -249,7 +279,11 @@ function runSeconds(s, seconds, inputFn, audio, stopWhen) {
  * `audio` is null in shot mode: screenshots are silent.
  */
 export function stageShot(name, world, audio = null) {
-  resetWorld(world, 'cinder');
+  // The action shot plays in Nova Core, not Cinder Drift: the two gameplay
+  // frames must read as different places, with a different sky, landmark,
+  // boss and sector name — not the same arena twice.
+  const sector = name === 'action' ? 'core' : 'cinder';
+  resetWorld(world, sector);
   if (name === 'victory') {
     // Play the boss fight until the Maw dies, then let the celebration
     // run out (~1.5s, so the kill's floating texts fade) and freeze on
