@@ -4,12 +4,15 @@
 // One file, one job: what the player sees in play.
 import { FIELD, PLAYER, COMBO, PALETTE } from './config.js';
 import { drawBackground, drawGlow } from './background.js';
-import { drawTitle, drawGameOver, drawPause } from './screens.js';
+import {
+  drawTitle, drawGameOver, drawPause, drawVictory,
+} from './screens.js';
 
 export const SCREEN_TITLE = 'title';
 export const SCREEN_PLAY = 'play';
 export const SCREEN_OVER = 'over';
 export const SCREEN_PAUSE = 'pause';
+export const SCREEN_WIN = 'win';
 
 const TAU = Math.PI * 2;
 
@@ -284,7 +287,7 @@ export function render(ctx, s, screen, time, muted, steady = false, ui = null) {
   if (s.shake > 0.3) {
     ctx.translate((Math.random() - 0.5) * s.shake, (Math.random() - 0.5) * s.shake);
   }
-  drawBackground(ctx, time, s.sectorId);
+  drawBackground(ctx, time, s.sectorId, s.player);
   for (const r of s.rifts) drawRift(ctx, r, time);
   // Embers.
   for (const em of s.embers) {
@@ -321,7 +324,7 @@ export function render(ctx, s, screen, time, muted, steady = false, ui = null) {
   }
   // Player.
   const p = s.player;
-  if (p.alive && screen !== SCREEN_OVER) {
+  if (p.alive && screen !== SCREEN_OVER && screen !== SCREEN_WIN) {
     const blink = p.invuln > 0 && Math.floor(time * 14) % 2 === 0;
     if (!blink) {
       drawGlow(ctx, p.x, p.y, 44, '#37e6ff', 0.75);
@@ -397,5 +400,6 @@ export function render(ctx, s, screen, time, muted, steady = false, ui = null) {
   if (screen === SCREEN_PLAY || screen === SCREEN_PAUSE) drawHud(ctx, s, muted);
   if (screen === SCREEN_TITLE) drawTitle(ctx, s, time, steady, ui);
   if (screen === SCREEN_OVER) drawGameOver(ctx, s, steady, ui);
+  if (screen === SCREEN_WIN) drawVictory(ctx, s, steady, ui);
   if (screen === SCREEN_PAUSE) drawPause(ctx);
 }
