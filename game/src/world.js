@@ -10,7 +10,8 @@ import {
 import { sectorById } from './sectors.js';
 import { dist2 } from './util.js';
 import { addFloater, burst, updateEffects } from './effects.js';
-import { collectEmber, dropEmbers, updateEmbers, updatePowerups } from './pickups.js';
+import { collectEmber, dropEmbers, updateEmbers, updatePowerups, collectShard, updateShards } from './pickups.js';
+import { hitShrine, updateShrines } from './shrines.js';
 import { spawnEnemy, killEnemy, updateEnemies } from './enemies.js';
 import { hurtPlayer, fadeLight } from './player.js';
 import { startWave } from './waves.js';
@@ -25,8 +26,9 @@ export function createWorld(rng, best = 0, sectorId = 'cinder') {
     lives: PLAYER.maxLives, gameOver: false, overTimer: 0,
     sectorCleared: false, sectorClearSaved: false,
     victory: false, victoryTimer: 0,
-    player: null, bullets: [], enemies: [], embers: [],
-    powerups: [], rifts: [], particles: [], floaters: [], shockwaves: [],
+    player: null, bullets: [], enemies: [], embers: [], shards: [],
+    powerups: [], rifts: [], shrines: [], particles: [], floaters: [], shockwaves: [],
+    hitsTaken: 0, shrinesSpawned: 0, shrinesLit: 0,
     spawnQueue: [], spawnTimer: 0, riftTimer: 12,
     boss: null, shake: 0, flashRed: 0, flashGold: 0, lowLight: false,
   };
@@ -45,15 +47,16 @@ export function resetWorld(s, sectorId = null) {
   s.lives = PLAYER.maxLives; s.gameOver = false; s.overTimer = 0;
   s.sectorCleared = false; s.sectorClearSaved = false;
   s.victory = false; s.victoryTimer = 0;
-  s.bullets = []; s.enemies = []; s.embers = []; s.powerups = [];
-  s.rifts = []; s.particles = []; s.floaters = []; s.shockwaves = [];
+  s.bullets = []; s.enemies = []; s.embers = []; s.shards = []; s.powerups = [];
+  s.rifts = []; s.shrines = []; s.particles = []; s.floaters = []; s.shockwaves = [];
+  s.hitsTaken = 0; s.shrinesSpawned = 0; s.shrinesLit = 0;
   s.spawnQueue = []; s.spawnTimer = 0; s.riftTimer = s.sector.riftEvery;
   s.boss = null; s.shake = 0; s.flashRed = 0; s.flashGold = 0;
   s.player = {
     x: FIELD.width / 2, y: FIELD.height / 2, vx: 0, vy: 0, angle: -Math.PI / 2,
     r: PLAYER.radius,
     fireCd: 0, dashTime: 0, dashCd: 0, invuln: 0, shield: 0, rapid: 0, spread: 0,
-    light: PLAYER.lightMax, novaCharges: 1, embersGathered: 0, alive: true,
+    light: PLAYER.lightMax, novaCharges: 1, embersGathered: 0, shardsGathered: 0, alive: true,
   };
 }
 
@@ -79,6 +82,9 @@ function fireNova(s, audio) {
   }
   for (const em of [...s.embers]) {
     if (dist2(em.x, em.y, p.x, p.y) < PLAYER.novaRadius ** 2) collectEmber(s, em, audio);
+  }
+  for (const sh of [...s.shards]) {
+    if (dist2(sh.x, sh.y, p.x, p.y) < PLAYER.novaRadius ** 2) collectShard(s, sh, audio);
   }
   if (audio) audio.nova();
   return true;
@@ -266,6 +272,16 @@ export function stepWorld(s, input, audio, dt) {
     }
     if (!s.bullets.includes(b)) continue;
     if (b.friendly) {
+      // Shrines take hits too: 6 shots light one.
+      for (const sh of [...s.shrines]) {
+        if (!sh.lit && dist2(b.x, b.y, sh.x, sh.y) < 30 * 30) {
+          s.bullets.splice(s.bullets.indexOf(b), 1);
+          s.shotsHit += 1;
+          hitShrine(s, sh, b.dmg, audio);
+          break;
+        }
+      }
+      if (!s.bullets.includes(b)) continue;
       for (const e of [...s.enemies]) {
         const rr = e.r + b.r;
         if (dist2(b.x, b.y, e.x, e.y) < rr * rr) {
@@ -323,7 +339,9 @@ export function stepWorld(s, input, audio, dt) {
 
   // --- pickups ---
   updateEmbers(s, dt, audio);
+  updateShards(s, dt, audio);
   updatePowerups(s, dt, audio);
+  updateShrines(s, dt);
 
   updateEffects(s, dt);
   s.shake = Math.max(0, s.shake - dt * 30);
