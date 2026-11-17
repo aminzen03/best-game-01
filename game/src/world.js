@@ -24,6 +24,7 @@ export function createWorld(rng, best = 0, sectorId = 'cinder') {
     wave: 0, waveState: 'banner', waveTimer: 2.2, banner: '',
     lives: PLAYER.maxLives, gameOver: false, overTimer: 0,
     sectorCleared: false, sectorClearSaved: false,
+    victory: false, victoryTimer: 0,
     player: null, bullets: [], enemies: [], embers: [],
     powerups: [], rifts: [], particles: [], floaters: [], shockwaves: [],
     spawnQueue: [], spawnTimer: 0, riftTimer: 12,
@@ -43,6 +44,7 @@ export function resetWorld(s, sectorId = null) {
   s.wave = 0; s.waveState = 'banner'; s.waveTimer = 2.2; s.banner = 'WAVE 1';
   s.lives = PLAYER.maxLives; s.gameOver = false; s.overTimer = 0;
   s.sectorCleared = false; s.sectorClearSaved = false;
+  s.victory = false; s.victoryTimer = 0;
   s.bullets = []; s.enemies = []; s.embers = []; s.powerups = [];
   s.rifts = []; s.particles = []; s.floaters = []; s.shockwaves = [];
   s.spawnQueue = []; s.spawnTimer = 0; s.riftTimer = s.sector.riftEvery;
@@ -121,6 +123,17 @@ export function stepWorld(s, input, audio, dt) {
 
   if (s.gameOver) {
     s.overTimer += dt;
+    updateEffects(s, dt);
+    s.shake = Math.max(0, s.shake - dt * 30);
+    s.flashRed = Math.max(0, s.flashRed - dt);
+    s.flashGold = Math.max(0, s.flashGold - dt);
+    return;
+  }
+
+  // The boss is dead: freeze the fight for a short celebration, then the
+  // win screen takes over (main.js watches victoryTimer).
+  if (s.victory) {
+    s.victoryTimer += dt;
     updateEffects(s, dt);
     s.shake = Math.max(0, s.shake - dt * 30);
     s.flashRed = Math.max(0, s.flashRed - dt);
