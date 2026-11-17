@@ -2,7 +2,7 @@
 // drifter minions. Timing lives in the enemy loop; the attacks themselves
 // live here, so the boss has its own file.
 // One file, one job: what the Maw does.
-import { TAU } from './util.js';
+import { TAU, dist2 } from './util.js';
 
 export function mawBurst(s, e, audio) {
   const n = 12;
@@ -19,6 +19,14 @@ export function mawBurst(s, e, audio) {
 
 export function mawSpawn(s, e, spawnEnemy) {
   for (let i = 0; i < 3; i += 1) {
-    spawnEnemy(s, 'drifter', e.x + s.rng.range(-70, 70), e.y + s.rng.range(-70, 70));
+    // Minions never spawn on top of the player: if the spawn point is too
+    // close, mirror it to the far side of the boss (same rule as rifts).
+    let x = e.x + s.rng.range(-70, 70);
+    let y = e.y + s.rng.range(-70, 70);
+    if (dist2(x, y, s.player.x, s.player.y) < 250 * 250) {
+      x = e.x - (x - e.x);
+      y = e.y - (y - e.y);
+    }
+    spawnEnemy(s, 'drifter', x, y);
   }
 }
