@@ -23,6 +23,7 @@ export const SECTORS = [
     bossName: 'VOID MAW',
     bossColor: '#ff3860',
     bossGlow: '#d90429',
+    landmark: { kind: 'dying-star', x: 1060, y: 150, r: 170 },
   },
   {
     id: 'reef',
@@ -43,6 +44,7 @@ export const SECTORS = [
     bossName: 'RIFT MAW',
     bossColor: '#b517ff',
     bossGlow: '#7b2ff7',
+    landmark: { kind: 'crystals', x: 640, y: 700, r: 200 },
   },
   {
     id: 'starfall',
@@ -63,6 +65,7 @@ export const SECTORS = [
     bossName: 'SHARD MAW',
     bossColor: '#00b4d8',
     bossGlow: '#0077b6',
+    landmark: { kind: 'ringed-planet', x: 1080, y: 120, r: 130 },
   },
   {
     id: 'core',
@@ -83,6 +86,7 @@ export const SECTORS = [
     bossName: 'NOVA MAW',
     bossColor: '#ffb703',
     bossGlow: '#fb8500',
+    landmark: { kind: 'nova-heart', x: 640, y: 190, r: 210 },
   },
 ];
 
