@@ -72,8 +72,11 @@ export function killEnemy(s, e, audio) {
     s.player.novaCharges = Math.min(PLAYER.novaMax, s.player.novaCharges + 1);
     addFloater(s, e.x, e.y - 44, `${e.def.name} DESTROYED`, '#ffd166', 22);
     // Beating a sector's boss clears the sector and unlocks the next one.
+    // It also ends the run in victory: the win screen takes over.
     if (!s.sectorCleared) {
       s.sectorCleared = true;
+      s.victory = true;
+      s.victoryTimer = 0;
       s.score += 1000;
       addFloater(s, e.x, e.y - 70, 'SECTOR CLEARED  +1000', '#7dff6a', 20);
     }
@@ -135,12 +138,14 @@ export function updateEnemies(s, dt, audio) {
       e.vy += ny * sp * 2 * dt;
       e.burstCd -= dt;
       if (e.burstCd <= 0) {
-        e.burstCd = e.hp < e.maxHp / 2 ? 2.4 : 3.4;
+        // A longer pause between rings than the old 3.4s: the ring is
+        // dodgeable, and a fair boss telegraphs instead of spamming.
+        e.burstCd = e.hp < e.maxHp / 2 ? 3.4 : 4.6;
         mawBurst(s, e, audio);
       }
       e.spawnCd -= dt;
       if (e.spawnCd <= 0) {
-        e.spawnCd = 7;
+        e.spawnCd = 11;
         mawSpawn(s, e, spawnEnemy);
       }
     }
