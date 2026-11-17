@@ -60,10 +60,13 @@ export const ENEMY_UNLOCK = {
   drifter: 1, weaver: 1, splitter: 2, stinger: 3, orbiter: 4,
 };
 
-// Wave composition: how many of each kind, and spawn pacing.
-export function wavePlan(wave) {
+// Wave composition: how many of each kind, and spawn pacing. `sector` is a
+// sector def (sectors.js); its enemyMul scales the mix, so each region
+// fights differently. With no sector, the base mix is used.
+export function wavePlan(wave, sector = null) {
   const plan = [];
-  const add = (kind, n) => { if (n > 0) plan.push({ kind, n }); };
+  const mul = (kind) => (sector && sector.enemyMul && sector.enemyMul[kind]) || 1;
+  const add = (kind, n) => { if (n > 0) plan.push({ kind, n: Math.max(1, Math.round(n * mul(kind))) }); };
   add('drifter', 5 + wave * 2);
   add('weaver', wave >= 1 ? 2 + wave : 0);
   add('splitter', wave >= 2 ? 1 + Math.floor(wave / 2) : 0);
@@ -72,8 +75,8 @@ export function wavePlan(wave) {
   return plan;
 }
 
-export function spawnInterval(wave) {
-  return Math.max(0.35, 1.15 - wave * 0.07);
+export function spawnInterval(wave, speedMul = 1) {
+  return Math.max(0.3, (1.15 - wave * 0.07) / speedMul);
 }
 
 export const POWERUP_TYPES = ['shield', 'rapid', 'spread', 'nova'];
