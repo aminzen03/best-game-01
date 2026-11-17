@@ -1,7 +1,10 @@
-// NOVA EMBER — all canvas drawing: background, entities, HUD and screens.
-// One file, one job: what the player sees. It simulates nothing.
-import { FIELD, PLAYER, PALETTE } from './config.js';
-import { makeRng } from './random.js';
+// NOVA EMBER — all canvas drawing in play: entities, HUD, and the render
+// orchestration. The backdrop lives in background.js, the full screens
+// (title, game over, pause) in screens.js.
+// One file, one job: what the player sees in play.
+import { FIELD, PLAYER, COMBO, PALETTE } from './config.js';
+import { drawBackground, drawGlow } from './background.js';
+import { drawTitle, drawGameOver, drawPause } from './screens.js';
 
 export const SCREEN_TITLE = 'title';
 export const SCREEN_PLAY = 'play';
@@ -9,70 +12,6 @@ export const SCREEN_OVER = 'over';
 export const SCREEN_PAUSE = 'pause';
 
 const TAU = Math.PI * 2;
-
-// Pre-rendered glow sprites: one radial gradient per colour, drawn cheaply.
-const spriteCache = new Map();
-function glowSprite(color) {
-  if (spriteCache.has(color)) return spriteCache.get(color);
-  const c = document.createElement('canvas');
-  c.width = 64;
-  c.height = 64;
-  const g = c.getContext('2d');
-  const grad = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, color);
-  grad.addColorStop(0.35, color);
-  grad.addColorStop(1, 'rgba(0,0,0,0)');
-  g.fillStyle = grad;
-  g.fillRect(0, 0, 64, 64);
-  spriteCache.set(color, c);
-  return c;
-}
-
-function drawGlow(ctx, x, y, radius, color, alpha = 0.8) {
-  ctx.globalAlpha = alpha;
-  ctx.drawImage(glowSprite(color), x - radius, y - radius, radius * 2, radius * 2);
-  ctx.globalAlpha = 1;
-}
-
-// Starfield + nebula, fixed by seed so the background never jumps.
-const bgRng = makeRng(20261116);
-const stars = [];
-for (let layer = 0; layer < 3; layer += 1) {
-  for (let i = 0; i < 70; i += 1) {
-    stars.push({
-      x: bgRng.range(0, FIELD.width), y: bgRng.range(0, FIELD.height),
-      r: bgRng.range(0.5, 1.4 + layer * 0.5), layer, tw: bgRng.range(0, TAU),
-    });
-  }
-}
-const nebulae = [
-  { x: 260, y: 180, r: 320, color: PALETTE.nebulaA },
-  { x: 1020, y: 520, r: 380, color: PALETTE.nebulaB },
-  { x: 900, y: 120, r: 260, color: PALETTE.nebulaC },
-  { x: 180, y: 600, r: 280, color: PALETTE.nebulaB },
-];
-
-function drawBackground(ctx, time) {
-  const grad = ctx.createLinearGradient(0, 0, 0, FIELD.height);
-  grad.addColorStop(0, PALETTE.bgTop);
-  grad.addColorStop(1, PALETTE.bgBottom);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, FIELD.width, FIELD.height);
-  for (const n of nebulae) {
-    ctx.globalAlpha = 0.9;
-    drawGlow(ctx, n.x + Math.sin(time * 0.05 + n.x) * 12, n.y + Math.cos(time * 0.04 + n.y) * 10, n.r, n.color, 1);
-  }
-  ctx.globalAlpha = 1;
-  for (const st of stars) {
-    const a = 0.35 + 0.3 * Math.sin(time * 1.4 + st.tw) + st.layer * 0.18;
-    ctx.globalAlpha = Math.max(0.1, Math.min(1, a));
-    ctx.fillStyle = st.layer === 2 ? '#cfe8ff' : '#9db8d8';
-    ctx.beginPath();
-    ctx.arc(st.x, st.y, st.r, 0, TAU);
-    ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
 
 function drawShip(ctx, x, y, angle, radius, color, flame) {
   ctx.save();
@@ -252,7 +191,7 @@ function bar(ctx, x, y, w, h, frac, fill, back = 'rgba(255,255,255,0.12)') {
 
 function drawHud(ctx, s, muted) {
   const p = s.player;
-  const mult = Math.min(5, 1 + s.combo * 0.05);
+  const mult = Math.min(COMBO.cap, 1 + s.combo * COMBO.step);
   ctx.textBaseline = 'alphabetic';
   // Score, top left.
   ctx.textAlign = 'left';
@@ -267,16 +206,19 @@ function drawHud(ctx, s, muted) {
     ctx.font = 'bold 18px ui-monospace, monospace';
     ctx.fillText(`COMBO x${mult.toFixed(1)}  (${s.combo})`, 20, 84);
   }
-  // Wave, top centre.
+  // Wave + sector, top centre.
   ctx.textAlign = 'center';
   ctx.fillStyle = PALETTE.hud;
   ctx.font = 'bold 20px ui-monospace, monospace';
   ctx.fillText(`WAVE ${Math.max(1, s.wave)}`, FIELD.width / 2, 34);
+  ctx.fillStyle = s.sector.accent;
+  ctx.font = 'bold 12px ui-monospace, monospace';
+  ctx.fillText(`SECTOR · ${s.sector.name}`, FIELD.width / 2, 52);
   if (s.boss) {
     ctx.fillStyle = '#ff3860';
     ctx.font = 'bold 13px ui-monospace, monospace';
-    ctx.fillText('VOID MAW', FIELD.width / 2, 54);
-    bar(ctx, FIELD.width / 2 - 130, 62, 260, 8, s.boss.hp / s.boss.maxHp, '#ff3860');
+    ctx.fillText(s.boss.def.name, FIELD.width / 2, 70);
+    bar(ctx, FIELD.width / 2 - 130, 78, 260, 8, s.boss.hp / s.boss.maxHp, '#ff3860');
   }
   // Lives + nova, top right.
   ctx.textAlign = 'right';
@@ -302,7 +244,7 @@ function drawHud(ctx, s, muted) {
   ctx.font = '12px ui-monospace, monospace';
   ctx.fillText(`DASH [SHIFT] ${p.dashCd > 0 ? Math.ceil(p.dashCd * 10) / 10 + 's' : 'READY'}`, FIELD.width - 20, 80);
   ctx.fillText(muted ? 'SOUND OFF [M]' : 'SOUND ON [M]', FIELD.width - 20, 98);
-  // Light meter, bottom centre.
+  // Light meter + ember harvest tally, bottom centre.
   const mw = 420;
   const mx = FIELD.width / 2 - mw / 2;
   const my = FIELD.height - 34;
@@ -315,6 +257,9 @@ function drawHud(ctx, s, muted) {
   ctx.strokeStyle = 'rgba(255,255,255,0.35)';
   ctx.lineWidth = 1;
   ctx.strokeRect(mx, my, mw, 10);
+  ctx.fillStyle = p.embersGathered >= s.sector.emberTarget ? '#7dff6a' : PALETTE.gold;
+  ctx.font = 'bold 12px ui-monospace, monospace';
+  ctx.fillText(`EMBERS ${p.embersGathered}/${s.sector.emberTarget}`, FIELD.width / 2, my + 26);
   // Active power-up timers, bottom left.
   ctx.textAlign = 'left';
   ctx.font = '13px ui-monospace, monospace';
@@ -333,122 +278,13 @@ function drawHud(ctx, s, muted) {
   }
 }
 
-function drawTitle(ctx, s, time, steady = false) {
-  ctx.fillStyle = 'rgba(4, 4, 16, 0.55)';
-  ctx.fillRect(0, 0, FIELD.width, FIELD.height);
-  ctx.textAlign = 'center';
-  const pulse = 1 + Math.sin(time * 2) * 0.02;
-  ctx.save();
-  ctx.translate(FIELD.width / 2, 168);
-  ctx.scale(pulse, pulse);
-  ctx.font = 'bold 84px system-ui, sans-serif';
-  const grad = ctx.createLinearGradient(-260, 0, 260, 0);
-  grad.addColorStop(0, '#37e6ff');
-  grad.addColorStop(0.5, '#ffd166');
-  grad.addColorStop(1, '#ff4d8d');
-  ctx.fillStyle = grad;
-  ctx.shadowColor = '#37e6ff';
-  ctx.shadowBlur = 26;
-  ctx.fillText('NOVA EMBER', 0, 0);
-  ctx.restore();
-  ctx.shadowBlur = 0;
-  ctx.fillStyle = PALETTE.hud;
-  ctx.font = '20px system-ui, sans-serif';
-  ctx.fillText('The last ember of a dying star. The Void is coming for your light.', FIELD.width / 2, 208);
-  // How to play panel.
-  const px = FIELD.width / 2 - 330;
-  const py = 250;
-  ctx.fillStyle = 'rgba(8, 12, 32, 0.78)';
-  ctx.strokeStyle = 'rgba(55, 230, 255, 0.45)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.roundRect(px, py, 660, 168, 14);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = PALETTE.gold;
-  ctx.font = 'bold 16px ui-monospace, monospace';
-  ctx.textAlign = 'left';
-  ctx.fillText('HOW TO PLAY', px + 24, py + 32);
-  ctx.fillStyle = PALETTE.hud;
-  ctx.font = '15px system-ui, sans-serif';
-  const lines = [
-    'WASD / ARROWS — fly      MOUSE — aim      HOLD CLICK / SPACE — fire',
-    'SHIFT / RIGHT-CLICK — dash through danger',
-    'E — NOVA blast (costs 1 charge)      P — pause      M — sound',
-    'Your LIGHT drains — collect the embers of fallen Void to stay alive.',
-    'Shoot a RIFT 12 times to charge it: it detonates into a nova.',
-    'Survive the waves. Every 5th wave the VOID MAW comes.',
-  ];
-  lines.forEach((line, i) => ctx.fillText(line, px + 24, py + 60 + i * 21));
-  if (s.best > 0) {
-    ctx.textAlign = 'center';
-    ctx.fillStyle = PALETTE.gold;
-    ctx.font = 'bold 18px ui-monospace, monospace';
-    ctx.fillText(`BEST SCORE  ${s.best}`, FIELD.width / 2, 452);
-  }
-  if (steady || Math.floor(time * 1.6) % 2 === 0) {
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px system-ui, sans-serif';
-    ctx.fillText('CLICK OR PRESS ENTER TO IGNITE', FIELD.width / 2, 500);
-  }
-  ctx.fillStyle = PALETTE.hudDim;
-  ctx.font = '13px system-ui, sans-serif';
-  ctx.fillText('A complete game: waves, boss, power-ups, nova, rifts — and a restart.', FIELD.width / 2, 540);
-}
-
-function drawGameOver(ctx, s, steady = false) {
-  ctx.fillStyle = 'rgba(8, 2, 10, 0.62)';
-  ctx.fillRect(0, 0, FIELD.width, FIELD.height);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#ff5b7a';
-  ctx.font = 'bold 64px system-ui, sans-serif';
-  ctx.shadowColor = '#ff3860';
-  ctx.shadowBlur = 24;
-  ctx.fillText('THE LIGHT FADES', FIELD.width / 2, 200);
-  ctx.shadowBlur = 0;
-  const isBest = s.score >= s.best && s.score > 0;
-  ctx.fillStyle = PALETTE.hud;
-  ctx.font = 'bold 34px ui-monospace, monospace';
-  ctx.fillText(`SCORE  ${s.score}`, FIELD.width / 2, 268);
-  if (isBest) {
-    ctx.fillStyle = '#ffd166';
-    ctx.font = 'bold 20px ui-monospace, monospace';
-    ctx.fillText('★ NEW BEST ★', FIELD.width / 2, 306);
-  } else {
-    ctx.fillStyle = PALETTE.hudDim;
-    ctx.font = '18px ui-monospace, monospace';
-    ctx.fillText(`BEST  ${s.best}`, FIELD.width / 2, 306);
-  }
-  ctx.fillStyle = PALETTE.hud;
-  ctx.font = '17px ui-monospace, monospace';
-  const acc = s.shotsFired > 0 ? Math.round((s.shotsHit / s.shotsFired) * 100) : 0;
-  ctx.fillText(`WAVES SURVIVED  ${s.wavesCleared}      VOID DESTROYED  ${s.kills}      ACCURACY  ${acc}%`, FIELD.width / 2, 352);
-  if (steady || Math.floor(s.time * 1.6) % 2 === 0) {
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px system-ui, sans-serif';
-    ctx.fillText('PRESS R OR CLICK TO PLAY AGAIN', FIELD.width / 2, 420);
-  }
-}
-
-function drawPause(ctx) {
-  ctx.fillStyle = 'rgba(4, 4, 16, 0.6)';
-  ctx.fillRect(0, 0, FIELD.width, FIELD.height);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = PALETTE.hud;
-  ctx.font = 'bold 56px system-ui, sans-serif';
-  ctx.fillText('PAUSED', FIELD.width / 2, FIELD.height / 2 - 10);
-  ctx.font = '18px system-ui, sans-serif';
-  ctx.fillStyle = PALETTE.hudDim;
-  ctx.fillText('Press P or Esc to resume', FIELD.width / 2, FIELD.height / 2 + 30);
-}
-
-export function render(ctx, s, screen, time, muted, steady = false) {
+export function render(ctx, s, screen, time, muted, steady = false, ui = null) {
   ctx.clearRect(0, 0, FIELD.width, FIELD.height);
   ctx.save();
   if (s.shake > 0.3) {
     ctx.translate((Math.random() - 0.5) * s.shake, (Math.random() - 0.5) * s.shake);
   }
-  drawBackground(ctx, time);
+  drawBackground(ctx, time, s.sectorId);
   for (const r of s.rifts) drawRift(ctx, r, time);
   // Embers.
   for (const em of s.embers) {
@@ -559,7 +395,7 @@ export function render(ctx, s, screen, time, muted, steady = false) {
   }
 
   if (screen === SCREEN_PLAY || screen === SCREEN_PAUSE) drawHud(ctx, s, muted);
-  if (screen === SCREEN_TITLE) drawTitle(ctx, s, time, steady);
-  if (screen === SCREEN_OVER) drawGameOver(ctx, s, steady);
+  if (screen === SCREEN_TITLE) drawTitle(ctx, s, time, steady, ui);
+  if (screen === SCREEN_OVER) drawGameOver(ctx, s, steady, ui);
   if (screen === SCREEN_PAUSE) drawPause(ctx);
 }
