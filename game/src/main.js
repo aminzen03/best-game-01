@@ -44,6 +44,10 @@ function runStats() {
     score: world.score,
     wavesCleared: world.wavesCleared,
     embers: world.player.embersGathered,
+    shards: world.player.shardsGathered,
+    shrinesLit: world.shrinesLit,
+    shrinesSpawned: world.shrinesSpawned,
+    hitsTaken: world.hitsTaken,
     cleared: world.sectorCleared,
     time: world.time,
   };
