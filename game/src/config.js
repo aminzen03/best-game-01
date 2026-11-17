@@ -96,6 +96,37 @@ export const RIFT = {
 
 export const COMBO = { windowSeconds: 3.0, step: 0.05, cap: 5 };
 
+// Star shards: the second collectible. Elites and the Maw drop them; they
+// are worth score, not light — a harvest tally of their own, tracked per
+// sector alongside embers.
+export const SHARD = {
+  score: 100,
+  magnet: 110,
+  life: 12,
+};
+
+// Shrines: a side objective. One wakes each wave from wave 2 — shoot it
+// 6 times to light it for score and shards. Lighting every shrine in a
+// cleared run earns the SHRINEKEEPER medal.
+export const SHRINE = {
+  hitsToLight: 6,
+  spawnFromWave: 2,
+  score: 250,
+  shardReward: 3,
+  life: 25,
+};
+
+// Medals: per-sector feats, earned once and kept. FLAWLESS = clear the boss
+// without taking a hit; SWIFT = clear it in under three minutes;
+// SHRINEKEEPER = light every shrine that woke in the run.
+export const MEDALS = ['flawless', 'swift', 'shrine'];
+export const MEDAL_NAMES = {
+  flawless: 'FLAWLESS',
+  swift: 'SWIFT',
+  shrine: 'SHRINEKEEPER',
+};
+export const SWIFT_SECONDS = 180;
+
 export const PALETTE = {
   bgTop: '#070716',
   bgBottom: '#0d1030',
