@@ -7,6 +7,7 @@ import { burst, addFloater } from './effects.js';
 export function hurtPlayer(s, cause, audio) {
   const p = s.player;
   if (p.invuln > 0 || p.shield > 0 || p.dashTime > 0 || s.gameOver) return;
+  s.hitsTaken += 1;
   s.lives -= 1;
   s.combo = 0;
   s.comboTimer = 0;
@@ -21,6 +22,7 @@ export function hurtPlayer(s, cause, audio) {
 
 export function fadeLight(s, audio) {
   const p = s.player;
+  s.hitsTaken += 1;
   s.lives -= 1;
   s.combo = 0;
   p.light = 55;
