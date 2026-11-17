@@ -2,7 +2,7 @@
 // Embers are the light economy: killing Void creatures drops them, gathering
 // them refills the light meter and counts toward the sector's harvest tally.
 // One file, one job: things the player collects.
-import { FIELD, PLAYER, POWERUP_TYPES, POWERUP_DROP_CHANCE, POWERUP_DURATION } from './config.js';
+import { FIELD, PLAYER, POWERUP_TYPES, POWERUP_DROP_CHANCE, POWERUP_DURATION, SHARD } from './config.js';
 import { dist2 } from './util.js';
 import { addFloater } from './effects.js';
 
@@ -13,6 +13,47 @@ export function dropEmbers(s, x, y, n) {
       x, y, vx: Math.cos(a) * s.rng.range(40, 140), vy: Math.sin(a) * s.rng.range(40, 140),
       value: PLAYER.lightPerEmber, life: 9,
     });
+  }
+}
+
+export function dropShards(s, x, y, n) {
+  for (let i = 0; i < n; i += 1) {
+    const a = s.rng.angle();
+    s.shards.push({
+      x, y, vx: Math.cos(a) * s.rng.range(40, 140), vy: Math.sin(a) * s.rng.range(40, 140),
+      life: SHARD.life,
+    });
+  }
+}
+
+export function collectShard(s, sh, audio) {
+  const idx = s.shards.indexOf(sh);
+  if (idx === -1) return;
+  s.shards.splice(idx, 1);
+  const p = s.player;
+  p.shardsGathered += 1;
+  s.score += SHARD.score;
+  if (audio) audio.pickup();
+}
+
+export function updateShards(s, dt, audio) {
+  const p = s.player;
+  for (const sh of [...s.shards]) {
+    sh.life -= dt;
+    sh.vx *= Math.exp(-2 * dt);
+    sh.vy *= Math.exp(-2 * dt);
+    const d = Math.hypot(p.x - sh.x, p.y - sh.y) || 1;
+    if (d < SHARD.magnet) {
+      sh.vx += ((p.x - sh.x) / d) * 520 * dt;
+      sh.vy += ((p.y - sh.y) / d) * 520 * dt;
+    }
+    sh.x += sh.vx * dt;
+    sh.y += sh.vy * dt;
+    if (sh.life <= 0) {
+      s.shards.splice(s.shards.indexOf(sh), 1);
+      continue;
+    }
+    if (p.alive && d < PLAYER.radius + 12) collectShard(s, sh, audio);
   }
 }
 
